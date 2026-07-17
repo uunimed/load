@@ -61,7 +61,6 @@
         }
         .login-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         
-        /* შეცდომის ანიმაცია და სტილი */
         .login-box input.input-error { border-color: var(--color-neg); background-color: var(--bg-neg); }
         .login-error { color: var(--color-neg); font-size: 0.85rem; margin-top: -5px; margin-bottom: 15px; display: none; font-weight: 600; text-align: left; padding-left: 5px; }
         .shake { animation: shake 0.4s ease-in-out; }
@@ -76,6 +75,29 @@
             border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s;
         }
         .login-box button:hover { background: var(--primary-hover); }
+
+        /* --- Loading Spinner --- */
+        #loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(3px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { margin-top: 15px; font-weight: 600; color: var(--text-muted); font-size: 0.95rem; }
 
         /* --- Main App Container --- */
         #app-container { display: none; padding: 25px; }
@@ -95,7 +117,7 @@
             visibility: hidden;
             transform: translateY(20px);
             transition: all 0.3s ease;
-            z-index: 10000;
+            z-index: 10001;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -109,13 +131,43 @@
         .header-title-group { display: flex; align-items: center; gap: 15px; }
         h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
         
-        .header-actions { display: flex; gap: 12px; }
-        .btn-add-patient { background-color: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1); transition: all 0.2s; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        
+        .nurse-select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            background-color: white;
+            outline: none;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .nurse-select:focus { border-color: var(--primary); }
+
+        .btn-add-patient { background-color: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; display: none; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1); transition: all 0.2s; }
         .btn-add-patient:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
         .btn-add-patient svg { width: 18px; height: 18px; fill: currentColor; }
-        
+
         .btn-logout { background-color: white; color: var(--text-muted); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .btn-logout:hover { background-color: #f1f5f9; color: var(--text-dark); border-color: #cbd5e1; }
+
+        /* Welcome Message */
+        #welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+            margin: 40px auto;
+            max-width: 600px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
 
         .patient-card { max-width: 1200px; margin: 0 auto 30px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid var(--border); padding: 20px; position: relative; animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -154,8 +206,13 @@
 
         .summary-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 250px; max-width: 300px; }
         .patient-tag { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .split-scores { display: flex; gap: 10px; }
+        .split-scores .score-card { flex: 1; padding: 10px; }
+        .split-scores .score-card p { font-size: 1.15rem; }
+
         .score-card { padding: 14px; border-radius: 8px; background: #f8fafc; border-left: 4px solid var(--primary); transition: all 0.3s ease; }
-        .score-card h4 { margin: 0; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .score-card h4 { margin: 0; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
         .score-card p { margin: 6px 0 0 0; font-size: 1.4rem; font-weight: 700; color: var(--text-dark); }
         .score-card.balance-pos { border-left-color: var(--color-pos); background: var(--bg-pos); color: var(--color-pos); }
         .score-card.balance-pos p { color: var(--color-pos); }
@@ -186,7 +243,7 @@
 </head>
 <body>
 
-<!-- 1. შესვლის გვერდი (განახლებული დიზაინით და შეცდომის ანიმაციით) -->
+<!-- 1. შესვლის გვერდი -->
 <div id="login-screen">
     <div class="login-box" id="login-box">
         <h2>ShogiBalance</h2>
@@ -197,6 +254,12 @@
     </div>
 </div>
 
+<!-- ჩატვირთვის ანიმაცია -->
+<div id="loader">
+    <div class="spinner"></div>
+    <div class="loader-text">მონაცემები იტვირთება...</div>
+</div>
+
 <!-- მთავარი აპლიკაცია -->
 <div id="app-container">
     <div class="header-controls">
@@ -204,7 +267,31 @@
             <h2>ბალანსის მენეჯმენტი</h2>
         </div>
         <div class="header-actions">
-            <button class="btn-add-patient" onclick="handleNewPatient()">
+            <!-- ექთნის ასარჩევი Dropdown ანბანის მიხედვით -->
+            <select id="nurse-selector" class="nurse-select" onchange="handleNurseChange()">
+                <option value="" disabled selected>აირჩიეთ ექთანი...</option>
+                <option value="abramishvili_n">აბრამიშვილი ნ.</option>
+                <option value="bazerashvili_n">ბაზერაშვილი ნ.</option>
+                <option value="gvirjishvili_m">გვირჯიშვილი მ.</option>
+                <option value="giorgadze_m">გიორგაძე მ.</option>
+                <option value="gogolauri_t">გოგოლაური თ.</option>
+                <option value="goloshvili_n">გოლოშვილი ნ.</option>
+                <option value="davitashvili_n">დავითაშვილი ნ.</option>
+                <option value="elbakidze_n">ელბაქიძე ნ.</option>
+                <option value="elizbarashvili_n">ელიზბარაშვილი ნ.</option>
+                <option value="tagviashvili_t">თაგვიაშვილი თ.</option>
+                <option value="katsiashvili_a">კაციაშვილი ა.</option>
+                <option value="kupatadze_k">კუპატაძე ქ.</option>
+                <option value="makarashvili_b">მაკარაშვილი ბ.</option>
+                <option value="orbelashvili_e">ორბელაშვილი ე.</option>
+                <option value="sulaberidze_s">სულაბერიძე ს.</option>
+                <option value="shogiradze_a">შოგირაძე ა.</option>
+                <option value="shogiradze_n">შოგირაძე ნ.</option>
+                <option value="chkadua_b">ჭკადუა ბ.</option>
+                <option value="jikurauli_s">ჯიქურაული ს.</option>
+            </select>
+
+            <button class="btn-add-patient" id="btn-add-patient" onclick="handleNewPatient()">
                 <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 პაციენტის დამატება
             </button>
@@ -213,6 +300,11 @@
                 გასვლა
             </button>
         </div>
+    </div>
+
+    <!-- მისასალმებელი ტექსტი სანამ ექთანი აირჩევა -->
+    <div id="welcome-message">
+        სისტემის ჩასატვირთად აირჩიეთ ექთანი ზედა მენიუდან
     </div>
 
     <div id="patients-container"></div>
@@ -278,31 +370,19 @@
 
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-    const dbRef = database.ref('clinical_balance_state');
+    
+    // დინამიური მონაცემთა ბაზის რეფერენსი ექთნის მიხედვით
+    let dbRef = null; 
+    let currentNurse = null;
 
     let activeCell = null;
     let patientCounter = 0;
     let patientToDelete = null;
     let toastTimeout;
 
-    // --- უნივერსალური შეტყობინების ფუნქცია (Toast) ---
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const msgEl = document.getElementById('toast-message');
-        const iconEl = document.getElementById('toast-icon');
-        
-        toast.className = 'toast show toast-' + type;
-        msgEl.innerText = message;
-        
-        if (type === 'success') {
-            iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
-        } else {
-            iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-        }
-
-        clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3000);
-    }
+    // Loader კონტროლი
+    function showLoader() { document.getElementById('loader').style.display = 'flex'; }
+    function hideLoader() { document.getElementById('loader').style.display = 'none'; }
 
     // --- შესვლისა და გამოსვლის ლოგიკა ---
     function attemptLogin() {
@@ -320,11 +400,10 @@
         // Reflow for animation re-trigger
         void boxEl.offsetWidth;
 
-        if (userEl.value === 'alex' && passEl.value === '2911') {
+        if (userEl.value === 'mcg' && passEl.value === 'stacionari') {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'block';
             showToast("სისტემაში წარმატებით შეხვედით", "success");
-            loadDataFromFirebase();
         } else {
             userEl.classList.add('input-error');
             passEl.classList.add('input-error');
@@ -348,11 +427,62 @@
         document.getElementById('password').classList.remove('input-error');
         document.getElementById('login-error').style.display = 'none';
         
+        // სამუშაო ველის საწყის მდგომარეობაში დაბრუნება მომდევნო შესვლისთვის
+        document.getElementById('nurse-selector').value = "";
+        document.getElementById('welcome-message').style.display = 'block';
+        document.getElementById('btn-add-patient').style.display = 'none';
+        document.getElementById('patients-container').innerHTML = '';
+        currentNurse = null;
+        dbRef = null;
+        
         showToast("სისტემიდან გამოხვედით", "success");
+    }
+
+    // --- ექთნის არჩევა და ჩატვირთვა ---
+    function handleNurseChange() {
+        const selector = document.getElementById('nurse-selector');
+        currentNurse = selector.value;
+        
+        const welcomeMsg = document.getElementById('welcome-message');
+        const btnAdd = document.getElementById('btn-add-patient');
+        const container = document.getElementById('patients-container');
+
+        if (currentNurse) {
+            welcomeMsg.style.display = 'none';
+            btnAdd.style.display = 'flex';
+            // მონაცემების შენახვის ბილიკი შეიცვლება არჩეული ექთნის მიხედვით
+            dbRef = database.ref('clinical_balance_state/' + currentNurse);
+            loadDataFromFirebase();
+        } else {
+            welcomeMsg.style.display = 'block';
+            btnAdd.style.display = 'none';
+            container.innerHTML = '';
+        }
+    }
+
+    // --- უნივერსალური შეტყობინების ფუნქცია (Toast) ---
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const msgEl = document.getElementById('toast-message');
+        const iconEl = document.getElementById('toast-icon');
+        
+        toast.className = 'toast show toast-' + type;
+        msgEl.innerText = message;
+        
+        if (type === 'success') {
+            iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        } else {
+            iconEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+        }
+
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3000);
     }
 
     // --- Firebase Save / Load Logic ---
     function saveStateToFirebase(customSuccessMsg = "მონაცემები შენახულია") {
+        if (!dbRef) return;
+
         const patients = [];
         document.querySelectorAll('.patient-card').forEach(card => {
             const getCells = (selector) => {
@@ -379,6 +509,10 @@
     }
 
     function loadDataFromFirebase() {
+        if (!dbRef) return;
+        
+        showLoader();
+
         dbRef.once('value').then((snapshot) => {
             const data = snapshot.val();
             document.getElementById('patients-container').innerHTML = '';
@@ -425,7 +559,11 @@
             } else {
                 handleNewPatient(); 
             }
-        }).catch(() => showToast("მონაცემების ჩატვირთვა ვერ მოხერხდა", "error"));
+            hideLoader();
+        }).catch(() => {
+            hideLoader();
+            showToast("მონაცემების ჩატვირთვა ვერ მოხერხდა", "error");
+        });
     }
 
     // --- Patient UI Logic ---
@@ -439,10 +577,7 @@
         addNewCell(card.querySelector('.row-po .cells-scroll-area'));
         addNewCell(card.querySelector('.row-output .cells-scroll-area'));
         
-        // გამოვიძახოთ შენახვა, თუ ეს არ არის ლოგინის შემდგომი პირველი ცარიელი ინიციალიზაცია
-        if(document.getElementById('app-container').style.display === 'block') {
-            saveStateToFirebase("პაციენტი დაემატა");
-        }
+        saveStateToFirebase("პაციენტი დაემატა");
     }
 
     function createPatientCardHTML(id) {
@@ -484,6 +619,19 @@
                 </div>
                 <div class="summary-panel">
                     <div class="patient-tag">პაციენტი: [-, -]</div>
+                    
+                    <!-- ახალი I.V. და P.O. ჯამის ბლოკები -->
+                    <div class="split-scores">
+                        <div class="score-card">
+                            <h4>სულ I.V</h4>
+                            <p class="iv-total-val" data-val="0">0 მლ</p>
+                        </div>
+                        <div class="score-card">
+                            <h4>სულ P.O</h4>
+                            <p class="po-total-val" data-val="0">0 მლ</p>
+                        </div>
+                    </div>
+
                     <div class="score-card">
                         <h4>მიღება სულ</h4>
                         <p class="total-input-val" data-val="0">0 მლ</p>
@@ -605,7 +753,7 @@
         activeCell.dataset.purpose = document.getElementById('purposeInput').value || "არ არის მითითებული";
         saveStateToFirebase("დანიშნულება შენახულია");
         closeModals();
-    };
+    }
 
     function closeModals() {
         document.getElementById('overlay').style.display = 'none';
@@ -643,6 +791,14 @@
 
         let totalInput = ivTotal + poTotal;
         let finalBalance = totalInput - outputTotal;
+
+        // I.V. და P.O ველების ანიმაცია
+        const ivTotalElem = patientCard.querySelector('.iv-total-val');
+        const poTotalElem = patientCard.querySelector('.po-total-val');
+        let oldIv = parseFloat(ivTotalElem.getAttribute('data-val')) || 0;
+        let oldPo = parseFloat(poTotalElem.getAttribute('data-val')) || 0;
+        animateValue(ivTotalElem, oldIv, ivTotal, " მლ");
+        animateValue(poTotalElem, oldPo, poTotal, " მლ");
 
         const totalInputElem = patientCard.querySelector('.total-input-val');
         const finalBalanceElem = patientCard.querySelector('.final-balance-val');
