@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>კლინიკური ბალანსის მართვის სისტემა</title>
+    
+    <!-- Firebase SDK (Version 8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -13,318 +18,184 @@
             --text-dark: #0f172a;
             --text-muted: #64748b;
             
-            /* ბალანსის მკაფიო ფერები */
-            --color-pos: #10b981; /* ზურმუხტისფერი მწვანე */
+            --color-pos: #10b981; 
             --bg-pos: #ecfdf5;
-            --color-neg: #ef4444; /* მკაფიო წითელი */
+            --color-neg: #ef4444; 
             --bg-neg: #fef2f2;
-            --color-zero: #f59e0b; /* ნარინჯისფერი */
+            --color-zero: #f59e0b; 
             --bg-zero: #fffbeb;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
-            padding: 25px;
+            padding: 0; /* Changed padding to 0 for full screen login */
             background-color: var(--bg-main);
             color: var(--text-dark);
         }
 
-        .header-controls {
-            max-width: 1200px;
-            margin: 0 auto 25px auto;
+        /* --- Login Screen --- */
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-main);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 15px;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 300px;
+            text-align: center;
+        }
+        .login-box h2 { margin-top: 0; margin-bottom: 20px; color: var(--primary); }
+        .login-box input {
+            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--border);
+            border-radius: 6px; box-sizing: border-box; outline: none;
+        }
+        .login-box input:focus { border-color: var(--primary); }
+        .login-box button {
+            width: 100%; padding: 10px; background: var(--primary); color: white;
+            border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+        }
+        .login-box button:hover { background: var(--primary-hover); }
+        .login-error { color: var(--color-neg); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+        /* --- Main App Container --- */
+        #app-container {
+            display: none;
+            padding: 25px;
         }
 
-        h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
-
-        .btn-add-patient {
-            background-color: var(--primary);
+        /* --- Toast Notification --- */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
             color: white;
-            border: none;
-            padding: 10px 18px;
+            padding: 12px 24px;
             border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
-            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 10000;
         }
+        #toast.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* (არსებული სტილები) */
+        .header-controls { max-width: 1200px; margin: 0 auto 25px auto; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); }
+        .btn-add-patient { background-color: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1); transition: all 0.2s; }
         .btn-add-patient:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
         .btn-add-patient svg { width: 18px; height: 18px; fill: currentColor; }
 
-        /* პაციენტის ბარათი */
-        .patient-card {
-            max-width: 1200px;
-            margin: 0 auto 30px auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-            border: 1px solid var(--border);
-            padding: 20px;
-            position: relative;
-            animation: slideIn 0.3s ease-out;
-        }
+        .patient-card { max-width: 1200px; margin: 0 auto 30px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid var(--border); padding: 20px; position: relative; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* წაშლის ღილაკი */
-        .btn-delete-patient {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 6px;
-            color: #94a3b8;
-            transition: all 0.2s;
-        }
+        .btn-delete-patient { position: absolute; top: 20px; right: 20px; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 6px; color: #94a3b8; transition: all 0.2s; }
         .btn-delete-patient:hover { color: var(--color-neg); background-color: var(--bg-neg); }
         .btn-delete-patient svg { width: 20px; height: 20px; }
 
-        .patient-info-inputs {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .info-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .info-group label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-group input {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 0.95rem;
-            outline: none;
-            width: 220px;
-            transition: border-color 0.15s;
-        }
+        .patient-info-inputs { display: flex; gap: 20px; margin-bottom: 20px; }
+        .info-group { display: flex; flex-direction: column; gap: 6px; }
+        .info-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-group input { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 0.95rem; outline: none; width: 220px; transition: border-color 0.15s; }
         .info-group input:focus { border-color: var(--primary); }
         .info-group input.room-input { width: 80px; text-align: center; }
 
-        .workspace {
-            display: flex;
-            gap: 25px;
-        }
+        .workspace { display: flex; gap: 25px; }
+        .table-container { flex: 3; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+        .balance-table { width: 100%; border-collapse: collapse; }
+        .balance-table th { background-color: #f8fafc; color: var(--text-muted); padding: 12px 16px; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; border-bottom: 1px solid var(--border); text-align: left; }
+        .balance-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .category-row { background-color: #f1f5f9; font-weight: 700; color: #334155; font-size: 0.85rem; }
+        .sub-label { font-weight: 600; color: #475569; width: 110px; }
 
-        /* ცხრილი */
-        .table-container {
-            flex: 3;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            background: #fff;
-        }
-
-        .balance-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .balance-table th {
-            background-color: #f8fafc;
-            color: var(--text-muted);
-            padding: 12px 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-        }
-
-        .balance-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .category-row {
-            background-color: #f1f5f9;
-            font-weight: 700;
-            color: #334155;
-            font-size: 0.85rem;
-        }
-
-        .sub-label {
-            font-weight: 600;
-            color: #475569;
-            width: 110px;
-        }
-
-        /* უჯრების სქროლი */
-        .cells-scroll-area {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 4px 4px 4px 0;
-            align-items: center;
-            max-width: 650px; /* ზღუდავს ზომას, რომ სქროლი ჩაირთოს */
-            white-space: nowrap;
-        }
-
-        /* სქროლბარის ვიზუალი */
+        .cells-scroll-area { display: flex; gap: 8px; overflow-x: auto; padding: 4px 4px 4px 0; align-items: center; max-width: 650px; white-space: nowrap; }
         .cells-scroll-area::-webkit-scrollbar { height: 5px; }
         .cells-scroll-area::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .cells-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .cells-scroll-area::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .num-cell {
-            min-width: 52px;
-            max-width: 52px;
-            height: 32px;
-            text-align: center;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.15s;
-        }
-
-        /* ისრების გაქრობა */
-        .num-cell::-webkit-outer-spin-button,
-        .num-cell::-webkit-inner-spin-button,
-        .modal input::-webkit-outer-spin-button,
-        .modal input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+        .num-cell { min-width: 52px; max-width: 52px; height: 32px; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; transition: all 0.15s; }
+        .num-cell::-webkit-outer-spin-button, .num-cell::-webkit-inner-spin-button, .modal input::-webkit-outer-spin-button, .modal input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .num-cell[type=number], .modal input[type=number] { -moz-appearance: textfield; }
-
         .num-cell:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1); }
-
-        .num-cell.filled {
-            background-color: #f0fdf4;
-            border-color: #bbf7d0;
-            color: #166534;
-            cursor: pointer;
-            font-weight: 600;
-        }
+        .num-cell.filled { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; cursor: pointer; font-weight: 600; }
         .num-cell.filled:hover { border-color: #4ade80; background-color: #dcfce7; }
 
-        /* მარჯვენა პანელი - მონიტორინგი */
-        .summary-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-width: 250px;
-            max-width: 300px;
-        }
-
-        .patient-tag {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: #f1f5f9;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border-left: 3px solid #cbd5e1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .score-card {
-            padding: 14px;
-            border-radius: 8px;
-            background: #f8fafc;
-            border-left: 4px solid var(--primary);
-            transition: all 0.3s ease;
-        }
-
+        .summary-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 250px; max-width: 300px; }
+        .patient-tag { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .score-card { padding: 14px; border-radius: 8px; background: #f8fafc; border-left: 4px solid var(--primary); transition: all 0.3s ease; }
         .score-card h4 { margin: 0; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
         .score-card p { margin: 6px 0 0 0; font-size: 1.4rem; font-weight: 700; color: var(--text-dark); }
-
-        /* ბალანსის დინამიური სტილები */
         .score-card.balance-pos { border-left-color: var(--color-pos); background: var(--bg-pos); color: var(--color-pos); }
         .score-card.balance-pos p { color: var(--color-pos); }
-        
         .score-card.balance-neg { border-left-color: var(--color-neg); background: var(--bg-neg); color: var(--color-neg); }
         .score-card.balance-neg p { color: var(--color-neg); }
-        
         .score-card.balance-zero { border-left-color: var(--color-zero); background: var(--bg-zero); color: var(--color-zero); }
         .score-card.balance-zero p { color: var(--color-zero); }
 
-        /* Popup სისტემა (დიდი ზომის) */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 999;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
-            z-index: 1000;
-            width: 450px; /* გაზრდილი ზომა */
-            animation: modalModal 0.2s ease-out;
-        }
-
-        @keyframes modalModal {
-            from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
-            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-
+        /* --- Modals --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 999; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); z-index: 1000; width: 450px; animation: modalModal 0.2s ease-out; }
+        @keyframes modalModal { from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         .modal h3 { margin-top: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-dark); border-bottom: 1px solid var(--border); padding-bottom: 12px; }
         .modal label { font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-top: 16px; }
         .modal input { width: 100%; padding: 10px 14px; margin-top: 6px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; outline: none; }
         .modal input:focus { border-color: var(--primary); }
-        
         .modal-details { background: #f8fafc; padding: 14px; border-radius: 8px; margin-top: 18px; font-size: 0.9rem; border: 1px solid var(--border); line-height: 1.6; }
         .modal-details strong { color: #475569; }
-
         .btn-group { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
         .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: background 0.15s; }
         .btn-save { background: var(--primary); color: white; }
         .btn-save:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--color-neg); color: white; }
+        .btn-danger:hover { background: #dc2626; }
         .btn-close { background: #f1f5f9; color: #475569; }
         .btn-close:hover { background: #e2e8f0; }
     </style>
 </head>
 <body>
 
-<div class="header-controls">
-    <h2>კლინიკური ბალანსის მონიტორინგი</h2>
-    <button class="btn-add-patient" onclick="createNewPatient()">
-        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        ახალი პაციენტის დამატება
-    </button>
+<!-- 1. შესვლის გვერდი -->
+<div id="login-screen">
+    <div class="login-box">
+        <h2>სისტემაში შესვლა</h2>
+        <input type="text" id="username" placeholder="მომხმარებელი" autocomplete="off">
+        <input type="password" id="password" placeholder="პაროლი">
+        <button onclick="attemptLogin()">შესვლა</button>
+        <div class="login-error" id="login-error">არასწორი მონაცემები!</div>
+    </div>
 </div>
 
-<div id="patients-container"></div>
+<!-- მთავარი აპლიკაცია -->
+<div id="app-container">
+    <div class="header-controls">
+        <h2>კლინიკური ბალანსის მონიტორინგი</h2>
+        <button class="btn-add-patient" onclick="handleNewPatient()">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            ახალი პაციენტის დამატება
+        </button>
+    </div>
+
+    <div id="patients-container"></div>
+</div>
+
+<!-- Toast შეტყობინება -->
+<div id="toast">ინფორმაცია შენახულია!</div>
 
 <!-- საერთო Popup-ები -->
 <div class="modal-overlay" id="overlay" onclick="closeModals()"></div>
@@ -336,7 +207,7 @@
     <input type="number" id="editValue">
     <div class="modal-details">
         <div><strong>დამატების დრო:</strong> <span id="detailTime"></span></div>
-        <div><strong>დანიშნულება:</strong> <span id="detailPurpose"></span></div>
+        <div id="purposeDisplayRow"><strong>დანიშნულება:</strong> <span id="detailPurpose"></span></div>
     </div>
     <div class="btn-group">
         <button class="btn btn-close" onclick="closeModals()">დახურვა</button>
@@ -355,32 +226,162 @@
     </div>
 </div>
 
+<!-- წაშლის დასადასტურებელი Popup -->
+<div class="modal" id="deleteModal">
+    <h3>პაციენტის წაშლა</h3>
+    <p>ნამდვილად გსურთ ამ პაციენტის ბარათის წაშლა? მონაცემები შეუქცევადად დაიკარგება.</p>
+    <div class="btn-group">
+        <button class="btn btn-close" onclick="closeModals()">გაუქმება</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">წაშლა</button>
+    </div>
+</div>
+
 <script>
+    // 5. Firebase კონფიგურაცია
+    const firebaseConfig = {
+        apiKey: "AIzaSyATvDjEFcDxjOiT3dEs9u5fmGQT5eIC7ao",
+        authDomain: "xelmowera-a9071.firebaseapp.com",
+        databaseURL: "https://xelmowera-a9071-default-rtdb.firebaseio.com",
+        projectId: "xelmowera-a9071",
+        storageBucket: "xelmowera-a9071.firebasestorage.app",
+        messagingSenderId: "332380909705",
+        appId: "1:332380909705:web:fcf89a6924ce779f93d658",
+        measurementId: "G-0E239LHWKZ"
+    };
+
+    // Firebase ინიციალიზაცია
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const dbRef = database.ref('clinical_balance_state');
+
     let activeCell = null;
     let patientCounter = 0;
+    let patientToDelete = null;
 
-    window.onload = function() { createNewPatient(); };
+    // --- 1. Login Logic ---
+    function attemptLogin() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const err = document.getElementById('login-error');
 
-    function createNewPatient() {
+        if (user === 'alex' && pass === '2911') {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+            loadDataFromFirebase(); // მონაცემების ჩატვირთვა შესვლის შემდეგ
+        } else {
+            err.style.display = 'block';
+        }
+    }
+
+    // --- 5. Firebase Save / Load Logic ---
+    function saveStateToFirebase() {
+        const patients = [];
+        document.querySelectorAll('.patient-card').forEach(card => {
+            const getCells = (selector) => {
+                const cells = [];
+                card.querySelectorAll(`${selector} .num-cell.filled`).forEach(cell => {
+                    cells.push({
+                        val: cell.value,
+                        time: cell.dataset.time,
+                        purpose: cell.dataset.purpose || "არ არის მითითებული"
+                    });
+                });
+                return cells;
+            };
+
+            patients.push({
+                id: card.id,
+                name: card.querySelector('.name-input').value || "",
+                room: card.querySelector('.room-input').value || "",
+                iv: getCells('.row-iv'),
+                po: getCells('.row-po'),
+                output: getCells('.row-output')
+            });
+        });
+        dbRef.set(patients);
+    }
+
+    function loadDataFromFirebase() {
+        dbRef.once('value').then((snapshot) => {
+            const data = snapshot.val();
+            document.getElementById('patients-container').innerHTML = '';
+            
+            if (data && data.length > 0) {
+                patientCounter = 0;
+                data.forEach(p => {
+                    const num = parseInt(p.id.replace('p-', ''));
+                    if (num > patientCounter) patientCounter = num;
+                    
+                    const card = createPatientCardHTML(p.id);
+                    document.getElementById('patients-container').appendChild(card);
+                    
+                    card.querySelector('.name-input').value = p.name;
+                    card.querySelector('.room-input').value = p.room;
+                    updatePatientTag(p.id);
+
+                    const restoreCells = (selector, cellDataList) => {
+                        const wrapper = card.querySelector(`${selector} .cells-scroll-area`);
+                        if (cellDataList) {
+                            cellDataList.forEach(dataCell => {
+                                const input = document.createElement('input');
+                                input.type = 'number';
+                                input.className = 'num-cell filled';
+                                input.value = dataCell.val;
+                                input.dataset.time = dataCell.time;
+                                input.dataset.purpose = dataCell.purpose;
+                                
+                                input.onchange = function() { handleCellChange(this); };
+                                input.oncontextmenu = function(e) { handleRightClick(e, this); };
+                                input.onclick = function() { handleLeftClick(this); };
+                                wrapper.appendChild(input);
+                            });
+                        }
+                        addNewCell(wrapper);
+                    };
+
+                    restoreCells('.row-iv', p.iv);
+                    restoreCells('.row-po', p.po);
+                    restoreCells('.row-output', p.output);
+                    
+                    calculatePatientBalance(card);
+                });
+            } else {
+                handleNewPatient(); // თუ ბაზა ცარიელია, 1 ცარიელი ბარათი შეიქმნება
+            }
+        });
+    }
+
+    // --- Patient UI Logic ---
+    function handleNewPatient() {
         patientCounter++;
         const id = 'p-' + patientCounter;
+        const card = createPatientCardHTML(id);
         
+        document.getElementById('patients-container').appendChild(card);
+        addNewCell(card.querySelector('.row-iv .cells-scroll-area'));
+        addNewCell(card.querySelector('.row-po .cells-scroll-area'));
+        addNewCell(card.querySelector('.row-output .cells-scroll-area'));
+        
+        saveStateToFirebase();
+    }
+
+    function createPatientCardHTML(id) {
         const card = document.createElement('div');
         card.className = 'patient-card';
         card.id = id;
         
         card.innerHTML = `
-            <button class="btn-delete-patient" onclick="deletePatient('${id}')" title="პაციენტის წაშლა">
+            <button class="btn-delete-patient" onclick="openDeleteModal('${id}')" title="პაციენტის წაშლა">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
             </button>
             <div class="patient-info-inputs">
                 <div class="info-group">
                     <label>სახელი, გვარი</label>
-                    <input type="text" class="name-input" placeholder="დემეტრე კაპანაძე" oninput="updatePatientTag('${id}')">
+                    <input type="text" class="name-input" placeholder="დემეტრე კაპანაძე" onchange="handleInputChange('${id}')">
                 </div>
                 <div class="info-group">
                     <label>პალატა</label>
-                    <input type="text" class="room-input" placeholder="104" oninput="updatePatientTag('${id}')">
+                    <input type="text" class="room-input" placeholder="104" onchange="handleInputChange('${id}')">
                 </div>
             </div>
             <div class="workspace">
@@ -414,18 +415,29 @@
                 </div>
             </div>
         `;
-        
-        document.getElementById('patients-container').appendChild(card);
-        addNewCell(card.querySelector('.row-iv .cells-scroll-area'));
-        addNewCell(card.querySelector('.row-po .cells-scroll-area'));
-        addNewCell(card.querySelector('.row-output .cells-scroll-area'));
+        return card;
     }
 
-    function deletePatient(id) {
-        if(confirm("ნამდვილად გსურთ ამ პაციენტის ბარათის წაშლა?")) {
-            document.getElementById(id).remove();
-        }
+    function handleInputChange(id) {
+        updatePatientTag(id);
+        saveStateToFirebase();
     }
+
+    // 4. წაშლის Custom Popup
+    function openDeleteModal(id) {
+        patientToDelete = id;
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('deleteModal').style.display = 'block';
+    }
+
+    document.getElementById('confirmDeleteBtn').onclick = function() {
+        if (patientToDelete) {
+            document.getElementById(patientToDelete).remove();
+            patientToDelete = null;
+            saveStateToFirebase(); // Firebase განახლება წაშლის შემდეგ
+        }
+        closeModals();
+    };
 
     function updatePatientTag(id) {
         const card = document.getElementById(id);
@@ -449,20 +461,24 @@
             if (!input.classList.contains('filled')) {
                 input.classList.add('filled');
                 
-                // თარიღის ფორმატირება: dd.mm.yyyy, hh:mm:ss
                 const now = new Date();
                 const pad = (n) => n.toString().padStart(2, '0');
                 const dateStr = `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()}, ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
                 
                 input.dataset.time = dateStr;
-                input.dataset.purpose = input.dataset.purpose || "არ არის მითითებული";
+                input.dataset.purpose = "არ არის მითითებული";
                 
                 addNewCell(input.parentElement);
-                
-                // ავტომატური სქროლი ბოლო უჯრაზე
                 setTimeout(() => { input.parentElement.scrollLeft = input.parentElement.scrollWidth; }, 50);
             }
             calculatePatientBalance(input.closest('.patient-card'));
+            saveStateToFirebase();
+        } else if (input.classList.contains('filled')) {
+            // თუ წაშალა მნიშვნელობა - ამოვშალოთ უჯრა
+            const card = input.closest('.patient-card');
+            input.remove();
+            calculatePatientBalance(card);
+            saveStateToFirebase();
         }
     }
 
@@ -471,43 +487,66 @@
         activeCell = input;
         document.getElementById('editValue').value = input.value;
         document.getElementById('detailTime').innerText = input.dataset.time || '';
-        document.getElementById('detailPurpose').innerText = input.dataset.purpose || 'ცარიელი';
+        
+        // 3. გამოყოფის უჯრებისთვის დანიშნულების დამალვა მარცხენა კლიკის დეტალებშიც
+        const isOutput = input.closest('.row-output') !== null;
+        if (isOutput) {
+            document.getElementById('purposeDisplayRow').style.display = 'none';
+        } else {
+            document.getElementById('purposeDisplayRow').style.display = 'block';
+            document.getElementById('detailPurpose').innerText = input.dataset.purpose || 'ცარიელი';
+        }
         
         document.getElementById('overlay').style.display = 'block';
         document.getElementById('editModal').style.display = 'block';
-
-        document.getElementById('saveEditBtn').onclick = function() {
-            if(document.getElementById('editValue').value !== "") {
-                activeCell.value = document.getElementById('editValue').value;
-                calculatePatientBalance(activeCell.closest('.patient-card'));
-                closeModals();
-            }
-        };
     }
+
+    document.getElementById('saveEditBtn').onclick = function() {
+        if(document.getElementById('editValue').value !== "") {
+            activeCell.value = document.getElementById('editValue').value;
+            calculatePatientBalance(activeCell.closest('.patient-card'));
+            saveStateToFirebase();
+            closeModals();
+        }
+    };
 
     function handleRightClick(event, input) {
         if (!input.classList.contains('filled')) return;
+        
+        // 3. გამოყოფის უჯრებში მარჯვენა კლიკის იგნორირება
+        if (input.closest('.row-output')) {
+            event.preventDefault(); // ბრაუზერის მენიუ არ გამოჩნდეს
+            return; // არაფერს აკეთებს
+        }
+
         event.preventDefault();
         activeCell = input;
         document.getElementById('purposeInput').value = input.dataset.purpose === "არ არის მითითებული" ? "" : input.dataset.purpose;
         
         document.getElementById('overlay').style.display = 'block';
         document.getElementById('purposeModal').style.display = 'block';
-
-        document.getElementById('savePurposeBtn').onclick = function() {
-            activeCell.dataset.purpose = document.getElementById('purposeInput').value || "არ არის მითითებული";
-            closeModals();
-        };
     }
+
+    document.getElementById('savePurposeBtn').onclick = function() {
+        activeCell.dataset.purpose = document.getElementById('purposeInput').value || "არ არის მითითებული";
+        saveStateToFirebase();
+        closeModals();
+        
+        // 2. Toast შეტყობინების გამოჩენა
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    };
 
     function closeModals() {
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('editModal').style.display = 'none';
         document.getElementById('purposeModal').style.display = 'none';
+        document.getElementById('deleteModal').style.display = 'none';
         activeCell = null;
+        patientToDelete = null;
     }
 
-    // ციფრების მორბენალი ანიმაციის ეფექტი (CountUp Effect)
     function animateValue(element, start, end, suffix) {
         if (start === end) return;
         let range = end - start;
@@ -543,11 +582,9 @@
         let oldTotal = parseFloat(totalInputElem.getAttribute('data-val')) || 0;
         let oldBalance = parseFloat(finalBalanceElem.getAttribute('data-val')) || 0;
 
-        // ანიმაციის გაშვება
         animateValue(totalInputElem, oldTotal, totalInput, " მლ");
         animateValue(finalBalanceElem, oldBalance, finalBalance, " მლ");
 
-        // ფერების დინამიური მართვა
         balanceCard.className = "score-card balance-card";
         if (finalBalance > 0) {
             balanceCard.classList.add('balance-pos');
